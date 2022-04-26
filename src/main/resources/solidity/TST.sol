@@ -118,11 +118,11 @@ contract TST is ERC20Interface, Owned, SafeMath {
         name = "Test Duke Token ";
         decimals = 0;
         _totalSupply = quantity_;
-        owner = 0xEc10233C905e647fEd29144A4e411c1d7E311264;
+        //owner = 0xEc10233C905e647fEd29144A4e411c1d7E311264;
         //paste your public address
-        balances[0xEc10233C905e647fEd29144A4e411c1d7E311264] = _totalSupply;
+        balances[msg.sender] = _totalSupply;
         //paste your public address again
-        emit Transfer(address(0), 0xEc10233C905e647fEd29144A4e411c1d7E311264, _totalSupply);
+        emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
 
@@ -211,12 +211,8 @@ contract TST is ERC20Interface, Owned, SafeMath {
     }
 
 
-    function buyProtection(uint256 _amount) external {
-        // When a person buys protection -- the insured sends us money which will applied to the premium
-        // and will send us ether
-//        bool sent = payable( address (this)  ).send(_amount);
-//        require(sent, "Failure unable to send ether " );
-        transferFrom({to: msg.sender, from: owner, tokens: _amount});
+    function pledgePurchaseOfProtection(uint256 _amount) public payable {
+        transferFrom({from: owner, to: msg.sender,  tokens: _amount});
         emit Transfer({from : owner, to : msg.sender , tokens :  _amount});
     }
 

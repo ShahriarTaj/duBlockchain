@@ -1,6 +1,7 @@
 package edu.duke.online.tenki;
 
 import edu.duke.online.tenki.generated.DukeWeatherContract;
+import edu.duke.online.tenki.generated.Insurance;
 import edu.duke.online.tenki.generated.TST;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.WalletUtils;
@@ -24,6 +25,45 @@ import java.util.Map;
 public class MTest {
 
     public static void main(String[] args) throws Exception{
+        Web3j w = Web3j.build(new HttpService());
+        Credentials insuranceCompany = WalletUtils.loadCredentials("costco",
+                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-16T17-47-03.15001000Z--ec10233c905e647fed29144a4e411c1d7e311264.json"));
+
+        Credentials protectionBuyer = WalletUtils.loadCredentials("costco",
+                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-12T01-44-14.931466000Z--6991381b245330a93b63bc6be5c2a8d3d21f2a83"));
+
+        Credentials riskBuyer = WalletUtils.loadCredentials("costco",
+                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore/UTC--2022-04-16T18-45-41.629605000Z--dbcb14153884c8871165e715f7688e06a47933ce.json"));
+
+        TransactionManager tmc = new FastRawTransactionManager(
+                w, insuranceCompany, 1337);
+
+        TransactionManager tmpb = new FastRawTransactionManager(
+                w, protectionBuyer, 1337);
+        TransactionManager tmrb = new FastRawTransactionManager(
+                w, riskBuyer, 1337);
+        Insurance test = Insurance.deploy(w,tmc, new DefaultGasProvider(), "XX1", "X", BigInteger.valueOf(110)).send();
+
+        String contractAddress = test.getContractAddress();
+        System.err.println(contractAddress);
+
+        System.err.println("Name: " + test.name().send());
+        System.err.println("Symbol: " + test.symbol().send());
+        System.err.println("Owner's balance: " + test.balanceOf(insuranceCompany.getAddress()).send());
+        System.err.println("TotalSupply: " + test.totalSupply().send());
+
+        //TransactionReceipt x = test.transfer("0x6991381b245330a93b63bc6be5c2a8d3d21f2a83", BigInteger.valueOf(15)).send();
+//        Insurance protectionBuyers = Insurance.load(contractAddress, w, tmpb, new DefaultGasProvider());
+//        TransactionReceipt x = protectionBuyers.buy(Convert.toWei(BigDecimal.valueOf(10), Convert.Unit.ETHER).toBigInteger()).send();
+//        List<Insurance.BoughtEventResponse> e = test.getBoughtEvents(x);
+//        System.err.println("from : " + e.get(0).amountToBuy);
+//        System.err.println("Owner's balance: " + test.balanceOf(insuranceCompany.getAddress()).send());
+//        System.err.println("Insured's balance: " + test.balanceOf(protectionBuyer.getAddress()).send());
+//        System.err.println("Contract Address: " + test.getContractAddress());
+
+    }
+
+    public static void oldmain(String[] args) throws Exception{
         Web3j w = Web3j.build(new HttpService());
         Credentials insuranceCompany = WalletUtils.loadCredentials("costco",
                 new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-16T17-47-03.15001000Z--ec10233c905e647fed29144a4e411c1d7e311264.json"));
@@ -66,9 +106,9 @@ public class MTest {
 
         TST protectionBuyers = TST.load(contractAddress, w, tmpb, new DefaultGasProvider());
 
-        TransactionReceipt x = protectionBuyers.buyProtection(BigInteger.valueOf(5)).send();
-        List<TST.TransferEventResponse> e = protectionBuyers.getTransferEvents(x);
-        System.err.println("from : " + e.get(0).from + "  ->  to : " + e.get(0).to + "   :   " +  e.get(0).tokens);
+//        TransactionReceipt x = protectionBuyers.buyProtection(BigInteger.valueOf(5)).send();
+//        List<TST.TransferEventResponse> e = protectionBuyers.getTransferEvents(x);
+//        System.err.println("from : " + e.get(0).from + "  ->  to : " + e.get(0).to + "   :   " +  e.get(0).tokens);
 
 //        TST riskBuyers = TST.load(contractAddress, w, tmrb, new DefaultGasProvider());
 //
@@ -78,37 +118,37 @@ public class MTest {
     }
 
     public static void imain(String[] args) throws Exception{
-        Web3j w = Web3j.build(new HttpService());
-        Credentials insuranceOwner = WalletUtils.loadCredentials("costco",
-                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore/UTC--2022-04-16T18-45-41.629605000Z--dbcb14153884c8871165e715f7688e06a47933ce.json"));
-
-        Credentials insuranceBuyer = WalletUtils.loadCredentials("costco",
-                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-12T01-44-14.931466000Z--6991381b245330a93b63bc6be5c2a8d3d21f2a83"));
-
-        TransactionManager tm = new FastRawTransactionManager(
-                w, insuranceOwner, 1337);
-
-
-
-         DukeWeatherContract d = DukeWeatherContract.deploy(w,tm, new DefaultGasProvider()).send();
-        //DukeWeatherContract d = DukeWeatherContract.load("0xBc385732dd709475Da60fb7d57A4623537B2e7A6", w, tm, new DefaultGasProvider());
-        List<DukeWeatherContract.SwapCreationEventResponse> e = null;
-        TransactionReceipt x = null;
-        TransactionReceipt y = d.createNewInsuranceContract(
-                BigInteger.valueOf(System.currentTimeMillis()),
-                BigInteger.valueOf(System.currentTimeMillis() + (3600 * 1000 * 2)),
-                BigInteger.valueOf(10L),
-                BigInteger.valueOf(1L),
-                "Northeast",
-                BigInteger.valueOf(70),
-                BigInteger.valueOf(5),
-                BigInteger.valueOf(-5)).send();
-
-        e = d.getSwapCreationEvents(y);
-        for ( DukeWeatherContract.SwapCreationEventResponse r : e){
-            System.err.println("SwapInfo: " + r.remainingIndemnity + " : " + r.region + " : " + r.minimumIndemnity);
-        }
-
+//        Web3j w = Web3j.build(new HttpService());
+//        Credentials insuranceOwner = WalletUtils.loadCredentials("costco",
+//                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore/UTC--2022-04-16T18-45-41.629605000Z--dbcb14153884c8871165e715f7688e06a47933ce.json"));
+//
+//        Credentials insuranceBuyer = WalletUtils.loadCredentials("costco",
+//                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-12T01-44-14.931466000Z--6991381b245330a93b63bc6be5c2a8d3d21f2a83"));
+//
+//        TransactionManager tm = new FastRawTransactionManager(
+//                w, insuranceOwner, 1337);
+//
+//
+//
+//         DukeWeatherContract d = DukeWeatherContract.deploy(w,tm, new DefaultGasProvider()).send();
+//        //DukeWeatherContract d = DukeWeatherContract.load("0xBc385732dd709475Da60fb7d57A4623537B2e7A6", w, tm, new DefaultGasProvider());
+//        List<DukeWeatherContract.SwapCreationEventResponse> e = null;
+//        TransactionReceipt x = null;
+//        TransactionReceipt y = d.createNewInsuranceContract(
+//                BigInteger.valueOf(System.currentTimeMillis()),
+//                BigInteger.valueOf(System.currentTimeMillis() + (3600 * 1000 * 2)),
+//                BigInteger.valueOf(10L),
+//                BigInteger.valueOf(1L),
+//                "Northeast",
+//                BigInteger.valueOf(70),
+//                BigInteger.valueOf(5),
+//                BigInteger.valueOf(-5)).send();
+//
+//        e = d.getSwapCreationEvents(y);
+//        for ( DukeWeatherContract.SwapCreationEventResponse r : e){
+//            System.err.println("SwapInfo: " + r.remainingIndemnity + " : " + r.region + " : " + r.minimumIndemnity);
+//        }
+//
 
 
 //        System.err.println("Buying into contract");
@@ -130,7 +170,7 @@ public class MTest {
 //            System.err.println("SwapInfo: " + r.remainingIndemnity + " : " + r.region);
 //        }
 
-        System.err.println("Contract Address: " + d.getContractAddress());
+//        System.err.println("Contract Address: " + d.getContractAddress());
 
     }
 

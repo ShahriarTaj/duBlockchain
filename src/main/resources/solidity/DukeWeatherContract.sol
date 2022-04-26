@@ -1,42 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.00;
 
+import "./Insurance.sol";
 
-contract DukeWeatherContract is ERC20Interface, Owned, SafeMath {
-    string public symbol;
-    string public  name;
-    uint8 public decimals;
-    uint public _totalSupply;
 
-    mapping(address => uint) balances;
-    mapping(address => mapping(address => uint)) allowed;
-
+contract DukeWeatherContract {
     struct WeatherSwap {
-
         uint contractStartDate;
         uint contractEndDate;
         uint256 premium;
         uint256 indemnity;
         uint256 remainingIndemnity;
         uint256 minimumIndemnity;
-        uint256 currentBalance;
         string region;
         int upperDeviationFromAvg;
         int lowerDeviationFromAvg;
         int averageTemperature;
         address insuredAddress;
         int status;
+        uint256 currentBalance;
     }
 
-    struct Insurer {
-        address insurer;
-        uint256 amount;
-    }
-
+    mapping(address => uint256) private _indemnityProviders;
     WeatherSwap  thisSwap;
-    Insurer [] insurers;
     address tenkiCompanyAccount = 0xEc10233C905e647fEd29144A4e411c1d7E311264;
-    address insured;
     /**
  * @dev This modifier checks that only the creator of the contract can call this smart contract
    */
@@ -51,141 +38,35 @@ contract DukeWeatherContract is ERC20Interface, Owned, SafeMath {
         uint256 indemnity,
         uint256 remainingIndemnity,
         uint256 minimumIndemnity,
-        uint256 currentBalance,
         string region,
         int upperDeviationFromAvg,
         int lowerDeviationFromAvg,
         int averageTemperature,
-        uint insurersCount,
         address insuredAddress,
-        int status     // 0 created but not funded (no premium has been sent)
-    // 1 Funded but minimum indemnity is not reached
-    // 2 funded and insured
-    // 3 ended with "event" happened and the protection buyer must be paid
-    // 4 ended without the "event" happening, the risk buyer (insurers) must be paid
+    // status with codes below
+        int status,
+    // 0 premium pledged  but not funded (no premium has been sent)
+    // 1 premium funded
+    // 2 indemnity pledged but pledges don't reach minimum
+    // 3 indemnity minimum has been reached but not funded
+    // 4 indemnity minimum is funded
+    // 5 ended with "event" happened and the protection buyer must be paid
+    // 6 ended without the "event" happening, the risk buyer (insurers) must be paid
+        uint256 currentBalance
 
     );
 
-    // ------------------------------------------------------------------------
-    // Constructor
-    // ------------------------------------------------------------------------
-    constructor(string memory symbol_, uint quantity_ ) {
-        //require(msg.sender == tenkiCompanyAccount);
-        symbol = symbol_;
-        name = "Test Duke Token ";
-        decimals = 0;
-        _totalSupply = quantity_;
-        owner = 0xEc10233C905e647fEd29144A4e411c1d7E311264;
-        //paste your public address
-        balances[0xEc10233C905e647fEd29144A4e411c1d7E311264] = _totalSupply;
-        //paste your public address again
-        emit Transfer(address(0), 0xEc10233C905e647fEd29144A4e411c1d7E311264, _totalSupply);
+    constructor(address premiumTokenAddress_, address indemnityTokenAddress_)  {
+        require(msg.sender == tenkiCompanyAccount);
+        _premiumTokenAddress = premiumTokenAddress_;
+        _indemnityTokenAddress = indemnityTokenAddress_;
+        _premiumTokenPrice = 0;
+        _indemnityTokenPrice = 0;
     }
-
-    // ------------------------------------------------------------------------
-    // Total supply
-    // ------------------------------------------------------------------------
-    function totalSupply() public override view returns (uint) {
-        return _totalSupply - balances[address(0)];
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Get the token balance for account tokenOwner
-    // ------------------------------------------------------------------------
-    function balanceOf(address tokenOwner) public override view returns (uint balance) {
-        return balances[tokenOwner];
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Transfer the balance from token owner's account to to account
-    // - Owner's account must have sufficient balance to transfer
-    // - 0 value transfers are allowed
-    // ------------------------------------------------------------------------
-    function transfer(address to, uint tokens) public override returns (bool success) {
-        balances[msg.sender] = safeSub(balances[msg.sender], tokens);
-        balances[to] = safeAdd(balances[to], tokens);
-        emit Transfer(msg.sender, to, tokens);
-        return true;
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Token owner can approve for spender to transferFrom(...) tokens
-    // from the token owner's account
-    //
-    // https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20-token-standard.md
-    // recommends that there are no checks for the approval double-spend attack
-    // as this should be implemented in user interfaces
-    // ------------------------------------------------------------------------
-    function approve(address spender, uint tokens) public override returns (bool success) {
-        allowed[msg.sender][spender] = tokens;
-        emit Approval(msg.sender, spender, tokens);
-        return true;
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Transfer tokens from the from account to the to account
-    //
-    // The calling account must already have sufficient tokens approve(...)-d
-    // for spending from the from account and
-    // - From account must have sufficient balance to transfer
-    // - Spender must have sufficient allowance to transfer
-    // - 0 value transfers are allowed
-    // ------------------------------------------------------------------------
-    function transferFrom(address from, address to, uint tokens) public override returns (bool success) {
-        balances[from] = safeSub(balances[from], tokens);
-        //the following line is suspect
-        //allowed[from][from] = safeSub(allowed[from][from], tokens);
-        balances[to] = safeAdd(balances[to], tokens);
-        emit Transfer(from, to, tokens);
-        return true;
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Returns the amount of tokens approved by the owner that can be
-    // transferred to the spender's account
-    // ------------------------------------------------------------------------
-    function allowance(address tokenOwner, address spender) public override view returns (uint remaining) {
-        return allowed[tokenOwner][spender];
-    }
-
-
-    // ------------------------------------------------------------------------
-    // Token owner can approve for spender to transferFrom(...) tokens
-    // from the token owner's account. The spender contract function
-    // receiveApproval(...) is then executed
-    // ------------------------------------------------------------------------
-    function approveAndCall(address spender, uint tokens, bytes memory data) public returns (bool success) {
-        allowed[msg.sender][spender] = tokens;
-        emit Approval(msg.sender, spender, tokens);
-        ApproveAndCallFallBack(spender).receiveApproval(msg.sender, tokens, address(this), data);
-        return true;
-    }
-
-
-    function buyProtection(uint256 _amount) external {
-        // When a person buys protection -- the insured sends us money which will applied to the premium
-        // and will send us ether
-        //        bool sent = payable( address (this)  ).send(_amount);
-        //        require(sent, "Failure unable to send ether " );
-        transferFrom({to: msg.sender, from: owner, tokens: _amount});
-        emit Transfer({from : owner, to : msg.sender , tokens :  _amount});
-    }
-
-    receive() payable external {
-        emit Transfer({from : msg.sender, to : address (this) , tokens :  msg.value});
-    }
-
-    // ------------------------------------------------------------------------
-    // Owner can transfer out any accidentally sent ERC20 tokens
-    // ------------------------------------------------------------------------
-    function transferAnyERC20Token(address tokenAddress, uint tokens) public onlyOwner returns (bool success) {
-        return ERC20Interface(tokenAddress).transfer(owner, tokens);
-    }
+    address _premiumTokenAddress;
+    address _indemnityTokenAddress;
+    uint256 _premiumTokenPrice;
+    uint256 _indemnityTokenPrice;
 
     function createNewInsuranceContract(
         uint contractStartDate,
@@ -202,7 +83,6 @@ contract DukeWeatherContract is ERC20Interface, Owned, SafeMath {
         indemnity : indemnity,
         remainingIndemnity : indemnity,
         minimumIndemnity : minimumIndemnity,
-        currentBalance : 0,
         premium : 0,
         contractStartDate : contractStartDate,
         contractEndDate : contractEndDate,
@@ -211,8 +91,8 @@ contract DukeWeatherContract is ERC20Interface, Owned, SafeMath {
         averageTemperature : averageTemperature,
         region : region,
         insuredAddress : msg.sender,
-        status : 0});
-        insured = msg.sender;
+        status : 0,
+        currentBalance :0 });
         emitInformation();
     }
 
@@ -224,45 +104,96 @@ contract DukeWeatherContract is ERC20Interface, Owned, SafeMath {
             thisSwap.indemnity,
             thisSwap.remainingIndemnity,
             thisSwap.minimumIndemnity,
-            thisSwap.currentBalance,
             thisSwap.region,
             thisSwap.upperDeviationFromAvg,
             thisSwap.lowerDeviationFromAvg,
             thisSwap.averageTemperature,
-            insurers.length,
             thisSwap.insuredAddress,
-            thisSwap.status
+            thisSwap.status,
+            address(this).balance
         );
     }
 
-    function buyProtection(uint256 amount_){
-        thisSwap.premium += amount_;
-        thisSwap.status = 1;
-        transfer(msg.sender, amount_);
 
-    }
 
-    function setPremium  (uint256 amount_) public {
+    function pledgePremium( uint256 amount_) public {
+        require(thisSwap.status == 0, "Can no longer pledge");
+        require(msg.sender == thisSwap.insuredAddress , "Only the insured can pledge premium" );
         thisSwap.premium = amount_;
         thisSwap.status = 1;
+        emitInformation();
+    }
+
+
+    function processIndemnityPayment ()   internal   {
+        require (
+            (thisSwap.status == 2 || thisSwap.status == 3) ,
+            "The payment to cover indemnity can only payed if there are enough pledges");
+        require (thisSwap.insuredAddress != msg.sender, "The insured need no longer pay premium");
+        require (tenkiCompanyAccount != msg.sender, "Tenki should not be paying");
+
+        thisSwap.remainingIndemnity -= msg.value;
+        _indemnityProviders[msg.sender] += msg.value / 1e18;
+
+        if ( thisSwap.remainingIndemnity <= thisSwap.minimumIndemnity){
+            thisSwap.status = 4;
+        }
+        Insurance(_indemnityTokenAddress).transferFrom( { from : tenkiCompanyAccount ,
+        to : payable(msg.sender),
+        amount : msg.value / 1e18 });
+
+    }
+    function processPremiumPayment () internal {
+        require( msg.sender == thisSwap.insuredAddress, "Only the insured can pay the premium");
+        require (thisSwap.status == 1 || thisSwap.status == 0 ,  "The insured can only pay after pledging premium");
+
+
+        //Move premium tokens to the insured
+        Insurance(_premiumTokenAddress).transferFrom( { from : tenkiCompanyAccount ,
+            to : payable(thisSwap.insuredAddress),
+            amount : msg.value / 1e18 });
+
+        thisSwap.status = 2;
 
     }
 
-    function setInsurer( address insurer_, uint256 amount_) public {
-        Insurer memory insurer = Insurer({insurer : insurer_, amount : amount_});
-        insurers.push(insurer);
-        thisSwap.remainingIndemnity -= amount_;
-        thisSwap.currentBalance += amount_;
+    function processDisasterPayment() internal {
+        //Pay the "Farmer" and Tenki -- the insurers get nothing
+        uint256 paymentToProtectionBuyer = thisSwap.indemnity - thisSwap.remainingIndemnity;
+        uint256 paymentToTenki = address(this).balance - paymentToProtectionBuyer - 50_000;
+        payable( thisSwap.insuredAddress).transfer( paymentToProtectionBuyer);
+        payable( tenkiCompanyAccount).transfer( paymentToTenki );
 
-        if (thisSwap.remainingIndemnity <= thisSwap.minimumIndemnity) {
-            thisSwap.status = 2;
+    }
+//
+//    function processNormalEndPayment() internal {
+//
+//    }
+
+
+    receive() payable external {
+        if ( thisSwap.status == 0 ){
+            processPremiumPayment ();
+        } else if ( thisSwap.status == 1){
+            processPremiumPayment ();
+        } else if (thisSwap.status == 2){
+            processIndemnityPayment();
+        } else if ( thisSwap.status == 3) {
+            processIndemnityPayment();
+        }else if ( thisSwap.status == 4) {
+            processIndemnityPayment();
         }
-
+        else
+        {
+            revert("No more payments are accepted");
+        }
+        emitInformation();
     }
 
     function catastrophicEventHappened() public payable {
         require(msg.sender == tenkiCompanyAccount);
-        thisSwap.status = 3;
+        thisSwap.status = 5;
+        processDisasterPayment();
         emitInformation();
     }
 }

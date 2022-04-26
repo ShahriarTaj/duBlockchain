@@ -21,3 +21,14 @@
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+.DS_Store
+.idea/
+src/.DS_Store
+src/main/.DS_Store
+src/main/resources/.DS_Store
+src/main/resources/solidity/.DS_Store
+src/main/resources/solidity/build/
+src/main/resources/solidity/openzeppelin-contracts/
+src/main/java/edu/duke/online/tenki/generated/target/
+

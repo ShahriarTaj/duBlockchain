@@ -18,3 +18,5 @@ spring:
 duke:
   chainId: 1337
   datadir: /Users/shahriartaj/DukeCourse/test-chain-dir
+  tenkiAddress: "0xEc10233C905e647fEd29144A4e411c1d7E311264"
+  defaultWalletPassword: "costco"
