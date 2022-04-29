@@ -158,21 +158,21 @@ contract DukeWeatherContract {
 
     }
 
-    function processDisasterPayment() internal {
-        //Pay the "Farmer" and Tenki -- the insurers get nothing
-        uint256 paymentToProtectionBuyer = thisSwap.indemnity - thisSwap.remainingIndemnity;
-        uint256 paymentToTenki = address(this).balance - paymentToProtectionBuyer;
+    function processEndOfContractPayments(address payable customerAddress) internal {
+
+        uint256 paymentToCustomer = 95 * (thisSwap.indemnity - thisSwap.remainingIndemnity + thisSwap.premium) / 100;
+        uint256 paymentToTenki = address(this).balance - paymentToCustomer;
 
         //Insurance(_premiumTokenAddress).setPrice( paymentToProtectionBuyer / Insurance(_premiumTokenAddress).totalSupply());
 
 
-        payable( thisSwap.insuredAddress ).transfer( paymentToProtectionBuyer);
+        payable( customerAddress ).transfer(paymentToCustomer);
         payable( tenkiCompanyAccount).transfer( paymentToTenki );
 
     }
 
     function processNormalEndPayment() internal {
-        uint256 paymentToRiskBuyer = address (this).balance - 1e18;// / 100 * 90;
+        uint256 paymentToRiskBuyer = address (this).balance;// - 1e18;// / 100 * 90;
         payable( _indemnityProviders).transfer( paymentToRiskBuyer );
         payable( tenkiCompanyAccount).transfer( address (this).balance - paymentToRiskBuyer );
     }
@@ -200,14 +200,14 @@ contract DukeWeatherContract {
     function endInsuranceNormally() public payable {
         require(msg.sender == tenkiCompanyAccount);
         thisSwap.status = 6;
-        processNormalEndPayment();
+        processEndOfContractPayments(payable(_indemnityProviders));
         emitInformation();
     }
 
     function catastrophicEventHappened() public payable {
         require(msg.sender == tenkiCompanyAccount);
         thisSwap.status = 5;
-        processDisasterPayment();
+        processEndOfContractPayments(payable(thisSwap.insuredAddress));
         emitInformation();
     }
 }
