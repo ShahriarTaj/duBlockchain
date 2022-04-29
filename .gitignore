@@ -30,5 +30,6 @@ src/main/resources/.DS_Store
 src/main/resources/solidity/.DS_Store
 src/main/resources/solidity/build/
 src/main/resources/solidity/openzeppelin-contracts/
-src/main/java/edu/duke/online/tenki/generated/target/
-
+src/main/java/edu/duke/online/tenki/generated/
+target/
+src/main/resources/static/tenki/node_modules

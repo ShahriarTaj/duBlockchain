@@ -21,7 +21,7 @@ contract DukeWeatherContract {
         uint256 currentBalance;
     }
 
-    mapping(address => uint256) private _indemnityProviders;
+    address private _indemnityProviders;
     WeatherSwap  thisSwap;
     address tenkiCompanyAccount = 0xEc10233C905e647fEd29144A4e411c1d7E311264;
     /**
@@ -52,7 +52,8 @@ contract DukeWeatherContract {
     // 4 indemnity minimum is funded
     // 5 ended with "event" happened and the protection buyer must be paid
     // 6 ended without the "event" happening, the risk buyer (insurers) must be paid
-        uint256 currentBalance
+        uint256 currentBalance,
+        address _indemnityProviders
 
     );
 
@@ -110,16 +111,16 @@ contract DukeWeatherContract {
             thisSwap.averageTemperature,
             thisSwap.insuredAddress,
             thisSwap.status,
-            address(this).balance
+            address(this).balance,
+            _indemnityProviders
         );
     }
 
 
 
     function pledgePremium( uint256 amount_) public {
-        require(thisSwap.status == 0, "Can no longer pledge");
         require(msg.sender == thisSwap.insuredAddress , "Only the insured can pledge premium" );
-        thisSwap.premium = amount_;
+        thisSwap.premium += amount_;
         thisSwap.status = 1;
         emitInformation();
     }
@@ -133,7 +134,7 @@ contract DukeWeatherContract {
         require (tenkiCompanyAccount != msg.sender, "Tenki should not be paying");
 
         thisSwap.remainingIndemnity -= msg.value;
-        _indemnityProviders[msg.sender] += msg.value / 1e18;
+        _indemnityProviders = msg.sender;
 
         if ( thisSwap.remainingIndemnity <= thisSwap.minimumIndemnity){
             thisSwap.status = 4;
@@ -160,15 +161,21 @@ contract DukeWeatherContract {
     function processDisasterPayment() internal {
         //Pay the "Farmer" and Tenki -- the insurers get nothing
         uint256 paymentToProtectionBuyer = thisSwap.indemnity - thisSwap.remainingIndemnity;
-        uint256 paymentToTenki = address(this).balance - paymentToProtectionBuyer - 50_000;
-        payable( thisSwap.insuredAddress).transfer( paymentToProtectionBuyer);
+        uint256 paymentToTenki = address(this).balance - paymentToProtectionBuyer;
+
+        //Insurance(_premiumTokenAddress).setPrice( paymentToProtectionBuyer / Insurance(_premiumTokenAddress).totalSupply());
+
+
+        payable( thisSwap.insuredAddress ).transfer( paymentToProtectionBuyer);
         payable( tenkiCompanyAccount).transfer( paymentToTenki );
 
     }
-//
-//    function processNormalEndPayment() internal {
-//
-//    }
+
+    function processNormalEndPayment() internal {
+        uint256 paymentToRiskBuyer = address (this).balance - 1e18;// / 100 * 90;
+        payable( _indemnityProviders).transfer( paymentToRiskBuyer );
+        payable( tenkiCompanyAccount).transfer( address (this).balance - paymentToRiskBuyer );
+    }
 
 
     receive() payable external {
@@ -187,6 +194,13 @@ contract DukeWeatherContract {
         {
             revert("No more payments are accepted");
         }
+        emitInformation();
+    }
+
+    function endInsuranceNormally() public payable {
+        require(msg.sender == tenkiCompanyAccount);
+        thisSwap.status = 6;
+        processNormalEndPayment();
         emitInformation();
     }
 

@@ -99,13 +99,17 @@ public class Services {
         Map<String, Object> data = new LinkedHashMap<>();
         try {
             TransactionManager transactionManager = getTransactionManager(getCredentials(tenkiAddress, "costco"));
+
+            String date = new Date(System.currentTimeMillis()).toString();
+            String s = (region + date + averageTemperature) .replaceAll(" ", "").toUpperCase();
+            s =         s.substring(0, Math.min(s.length(), 10));
             Insurance premiumToken = Insurance.deploy(web3j,
                     transactionManager, new DefaultGasProvider(),
-                    region + averageTemperature, "P" + region.replaceAll(" ", "_").toUpperCase() + averageTemperature,
+                    region + averageTemperature, "P"+  s ,
                     Convert.fromWei(premium, Convert.Unit.ETHER).toBigInteger()).send();
             Insurance indemnityToken = Insurance.deploy(web3j,
                     transactionManager, new DefaultGasProvider(),
-                    region + averageTemperature, "I" + region.replaceAll(" ", "_").toUpperCase() + averageTemperature,
+                    region + averageTemperature, "I" + s ,
                     Convert.fromWei(indemnity, Convert.Unit.ETHER).toBigInteger()).send();
 
 
@@ -169,6 +173,7 @@ public class Services {
             data.put("InsuredAddress", swap.insuredAddress);
             data.put("CurrentBalance", swap.currentBalance);
             data.put("Status", swap.status);
+            data.put("InsuranceProvider", swap._indemnityProviders);
         }
         return data;
     }

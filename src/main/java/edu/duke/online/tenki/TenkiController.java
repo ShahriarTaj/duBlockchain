@@ -4,6 +4,7 @@ import edu.duke.online.tenki.generated.DukeWeatherContract;
 import edu.duke.online.tenki.model.FromToAccount;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,7 @@ import org.web3j.utils.Convert;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -42,6 +44,7 @@ public class TenkiController {
     String defaultWalletPassword;
 
 
+    @CrossOrigin(origins = "http://localhost:4200")
     @GetMapping(value = "info")
     public Map<String, Object> getInfo() {
         Map<String, Object> info = new LinkedHashMap<>();
@@ -65,13 +68,14 @@ public class TenkiController {
     }
 
 
+    @CrossOrigin(origins = "http://localhost:4200")
     @PostMapping("transferEther/{amount}")
     Map<String, Object> transferEther(@PathVariable("amount") BigDecimal amount,
                                       @RequestBody FromToAccount accounts) {
         return services.transferEther(amount, accounts);
     }
 
-
+    @CrossOrigin(origins = "http://localhost:4200")
     @GetMapping("insurance/{contractAddress}")
     Map<String, Object> getInsuranceInfo(
             @PathVariable("contractAddress") String contractAddress) {
@@ -84,7 +88,7 @@ public class TenkiController {
         } catch (Exception e) {
             throw new RuntimeException("Unable to get information on contract " + e.getMessage());
         }
-
+        System.err.println(data);
         return data;
     }
 
@@ -107,6 +111,27 @@ public class TenkiController {
 //        return data;
 //    }
 
+    @CrossOrigin(origins = "http://localhost:4200")
+    @PostMapping("naturalEndOfInsurance/{contractAddress}/{tenkiAddress}")
+    Map<String, Object> endNaturally(@PathVariable("contractAddress") String contractAddress,
+                                           @PathVariable("tenkiAddress") String tenkiAddress,
+                                           @RequestParam("walletPassword") String walletPassword) {
+        Map<String, Object> data = null;
+
+        try {
+            DukeWeatherContract dukeWeatherContract = services.getDukeWeatherContract(contractAddress, tenkiAddress, walletPassword);
+            TransactionReceipt transactionReceipt =
+                    dukeWeatherContract.endInsuranceNormally().send();
+            data = services.extractInfoFromSwap(dukeWeatherContract, transactionReceipt);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to end the contract naturally" + e.getMessage());
+        }
+
+
+        return data;
+    }
+    @CrossOrigin(origins = "http://localhost:4200")
     @PostMapping("catastrophicEventHappened/{contractAddress}/{tenkiAddress}")
     Map<String, Object> endWithCatastrophe(@PathVariable("contractAddress") String contractAddress,
                                            @PathVariable("tenkiAddress") String tenkiAddress,
@@ -129,7 +154,7 @@ public class TenkiController {
 //            System.err.println(  transferEther(amountToMove, fromToAccount));
 
         } catch (Exception e) {
-            throw new RuntimeException("Unable to get information on contract " + e.getMessage());
+            throw new RuntimeException("Unable end insurance with disaster " + e.getMessage());
         }
 
 
@@ -137,6 +162,7 @@ public class TenkiController {
     }
 
 
+    @CrossOrigin(origins = "http://localhost:4200")
     @PostMapping("createNewInsurance/{ownerAddress}")
     Map<String, Object> insurance(@PathVariable("ownerAddress") String ownerAddress,
                                   @RequestParam("contractStartDate") Date contractStartDate,
@@ -149,20 +175,23 @@ public class TenkiController {
                                   @RequestParam("lowerTemperatureBoundary") BigDecimal lowerDeviationFromAvg,
                                   @RequestParam("averageTemperature") BigDecimal averageTemperature,
                                   @RequestParam("walletPassword") String walletPassword) {
-
-        return services.createNewInsuranceContract(
-                ownerAddress,
-                contractStartDate,
-                contractEndDate,
-                Convert.toWei(premium, Convert.Unit.ETHER),
-                Convert.toWei(indemnity, Convert.Unit.ETHER),
-                Convert.toWei(minimumProtection, Convert.Unit.ETHER),
-                region,
-                upperDeviationFromAvg,
-                lowerDeviationFromAvg,
-                averageTemperature,
-                walletPassword
+        try {
+            return services.createNewInsuranceContract(
+                    ownerAddress,
+                    contractStartDate,
+                    contractEndDate,
+                    Convert.toWei(premium, Convert.Unit.ETHER),
+                    Convert.toWei(indemnity, Convert.Unit.ETHER),
+                    Convert.toWei(minimumProtection, Convert.Unit.ETHER),
+                    region,
+                    upperDeviationFromAvg,
+                    lowerDeviationFromAvg,
+                    averageTemperature,
+                    walletPassword
         );
+        }catch (Exception e){
+            throw new RuntimeException("Unable to create a new contract : " + e.getMessage());
+        }
     }
 
 
