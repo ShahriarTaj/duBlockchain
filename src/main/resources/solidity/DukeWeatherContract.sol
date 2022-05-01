@@ -45,8 +45,8 @@ contract DukeWeatherContract {
         address insuredAddress,
     // status with codes below
         int status,
-    // 0 premium pledged  but not funded (no premium has been sent)
-    // 1 premium funded
+    // 0 premium not even pledged
+    // 1 pledged  but not funded (no premium has been sent)
     // 2 indemnity pledged but pledges don't reach minimum
     // 3 indemnity minimum has been reached but not funded
     // 4 indemnity minimum is funded
@@ -64,8 +64,15 @@ contract DukeWeatherContract {
         _premiumTokenPrice = 0;
         _indemnityTokenPrice = 0;
     }
-    address _premiumTokenAddress;
+
+    address _premiumTokenAddress ;
+    function getPremiumToken() external view  returns (address premiumTokenAddress){
+        return _premiumTokenAddress;
+    }
     address _indemnityTokenAddress;
+    function getIndemnityToken() external view  returns (address indemnityTokenAddress){
+        return _indemnityTokenAddress;
+    }
     uint256 _premiumTokenPrice;
     uint256 _indemnityTokenPrice;
 
@@ -160,7 +167,7 @@ contract DukeWeatherContract {
 
     function processEndOfContractPayments(address payable customerAddress) internal {
 
-        uint256 paymentToCustomer = 95 * (thisSwap.indemnity - thisSwap.remainingIndemnity + thisSwap.premium) / 100;
+        uint256 paymentToCustomer = thisSwap.indemnity - thisSwap.remainingIndemnity + (thisSwap.premium * 90 / 100);
         uint256 paymentToTenki = address(this).balance - paymentToCustomer;
 
         //Insurance(_premiumTokenAddress).setPrice( paymentToProtectionBuyer / Insurance(_premiumTokenAddress).totalSupply());

@@ -144,8 +144,13 @@ public class Services {
             //Now pledge the premium amount
             TransactionReceipt transactionReceipt = thisSwap.pledgePremium(premium.toBigInteger()).send();
             data = extractInfoFromSwap(thisSwap, transactionReceipt);
-            data.put("PremiumTokenAddress", premiumToken.getContractAddress());
-            data.put("IndemnityTokenAddress", indemnityToken.getContractAddress());
+//            data.put("PremiumTokenAddress", premiumToken.getContractAddress());
+//            data.put("IndemnityTokenAddress", indemnityToken.getContractAddress());
+
+            //Now persist it to our local database
+            new SimpleJdbcInsert(jdbcTemplate)
+                    .withTableName("EXCHANGE_LISTING").
+                    execute(data);
 
         } catch (Exception e) {
             throw new RuntimeException("Unable to create new contract " + e.getMessage());
@@ -155,6 +160,7 @@ public class Services {
 
     public Map<String, Object> extractInfoFromSwap(DukeWeatherContract dukeWeatherContract,
                                                    TransactionReceipt transactionReceipt) {
+
         Map<String, Object> data = new LinkedHashMap<>();
         List<DukeWeatherContract.SwapCreationEventResponse> swaps =
                 dukeWeatherContract.getSwapCreationEvents(transactionReceipt);
@@ -163,9 +169,9 @@ public class Services {
             data.put("StartDate", new Date(swap.contractStartDate.longValue()));
             data.put("EndDate", new Date(swap.contractEndDate.longValue()));
             data.put("Region", swap.region);
-            data.put("Premium", swap.premium.toString());
-            data.put("Indemnity", swap.indemnity);
-            data.put("MinimumIndemnity", swap.minimumIndemnity);
+            data.put("Premium", Convert.fromWei( String.valueOf(swap.premium)   , Convert.Unit.ETHER).longValue());
+            data.put("Indemnity", Convert.fromWei( String.valueOf(swap.indemnity)   , Convert.Unit.ETHER).longValue());
+            data.put("MinimumIndemnity", Convert.fromWei( String.valueOf(swap.minimumIndemnity)   , Convert.Unit.ETHER).longValue());
             data.put("UpperTemperature", swap.upperDeviationFromAvg);
             data.put("LowerTemperature", swap.lowerDeviationFromAvg);
             data.put("AverageTemperature", swap.averageTemperature);
@@ -174,6 +180,13 @@ public class Services {
             data.put("CurrentBalance", swap.currentBalance);
             data.put("Status", swap.status);
             data.put("InsuranceProvider", swap._indemnityProviders);
+            try {
+                data.put("PremiumTokenAddress", dukeWeatherContract.getPremiumToken().send());
+                data.put("IndemnityTokenAddress", dukeWeatherContract.getIndemnityToken().send());
+            }
+            catch(Exception e){
+                //Ignore these ....
+            }
         }
         return data;
     }
