@@ -25,5 +25,4 @@ contract Insurance is ERC20 {
         return  10000e18;
     }
 
-
 }

@@ -2,6 +2,7 @@ package edu.duke.online.tenki;
 
 import edu.duke.online.tenki.generated.DukeWeatherContract;
 import edu.duke.online.tenki.generated.Insurance;
+import edu.duke.online.tenki.generated.Syndicated;
 import edu.duke.online.tenki.generated.TST;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.WalletUtils;
@@ -25,6 +26,36 @@ import java.util.Map;
 public class MTest {
 
     public static void main(String[] args) throws Exception{
+        Web3j w = Web3j.build(new HttpService());
+        Credentials insuranceCompany = WalletUtils.loadCredentials("costco",
+                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-16T17-47-03.15001000Z--ec10233c905e647fed29144a4e411c1d7e311264.json"));
+
+        Credentials protectionBuyer = WalletUtils.loadCredentials("costco",
+                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-12T01-44-14.931466000Z--6991381b245330a93b63bc6be5c2a8d3d21f2a83"));
+
+        Credentials riskBuyer = WalletUtils.loadCredentials("costco",
+                new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore/UTC--2022-04-16T18-45-41.629605000Z--dbcb14153884c8871165e715f7688e06a47933ce.json"));
+
+        TransactionManager tmc = new FastRawTransactionManager(
+                w, insuranceCompany, 1337);
+
+        TransactionManager tmpb = new FastRawTransactionManager(
+                w, protectionBuyer, 1337);
+        TransactionManager tmrb = new FastRawTransactionManager(
+                w, riskBuyer, 1337);
+
+        Syndicated syndicated = Syndicated.deploy(w, tmc, new DefaultGasProvider()).send();
+        System.err.println("SYN: " + syndicated.getContractAddress());
+        System.err.println("Premium: " + syndicated.getPremiumToken().send());
+        System.err.println("Indemnity : " + syndicated.getIndemnityToken().send());
+
+        Insurance premiumBuy = Insurance.load(syndicated.getPremiumToken().send(), w, tmpb, new DefaultGasProvider());
+        System.err.println(premiumBuy.totalSupply().send());
+
+
+    }
+
+    public static void ignore2main(String[] args) throws Exception{
         Web3j w = Web3j.build(new HttpService());
         Credentials insuranceCompany = WalletUtils.loadCredentials("costco",
                 new File("/Users/shahriartaj/DukeCourse/test-chain-dir/keystore//UTC--2022-04-16T17-47-03.15001000Z--ec10233c905e647fed29144a4e411c1d7e311264.json"));
